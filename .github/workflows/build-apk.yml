@@ -24,16 +24,18 @@ jobs:
 
       - name: Create Android WebView project
         run: |
-          mkdir -p app/src/main/assets app/src/main/java/com/example/quizapp app/src/main/res/layout
-          cp o_v17.html app/src/main/assets/o_v17.html
+          python3 - << 'PY'
+          import os, shutil
 
-          cat << 'EOF' > settings.gradle
-          rootProject.name = "QuizAppAPK"
-          include(":app")
-          EOF
+          os.makedirs("app/src/main/assets", exist_ok=True)
+          os.makedirs("app/src/main/java/com/example/quizapp", exist_ok=True)
+          os.makedirs("app/src/main/res/layout", exist_ok=True)
 
-          cat << 'EOF' > build.gradle
-          buildscript {
+          shutil.copyfile("o_v17.html", "app/src/main/assets/o_v17.html")
+
+          files = {
+              "settings.gradle": 'rootProject.name = "QuizAppAPK"\ninclude(":app")\n',
+              "build.gradle": '''buildscript {
             repositories {
               google()
               mavenCentral()
@@ -48,15 +50,9 @@ jobs:
               mavenCentral()
             }
           }
-          EOF
-
-          cat << 'EOF' > gradle.properties
-          android.useAndroidX=true
-          org.gradle.jvmargs=-Xmx2048m
-          EOF
-
-          cat << 'EOF' > app/build.gradle
-          plugins {
+          ''',
+              "gradle.properties": "android.useAndroidX=true\norg.gradle.jvmargs=-Xmx2048m\n",
+              "app/build.gradle": '''plugins {
             id "com.android.application"
           }
           android {
@@ -82,10 +78,8 @@ jobs:
           dependencies {
             implementation "androidx.appcompat:appcompat:1.7.0"
           }
-          EOF
-
-          cat << 'EOF' > app/src/main/AndroidManifest.xml
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          ''',
+              "app/src/main/AndroidManifest.xml": '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
             <uses-permission android:name="android.permission.INTERNET" />
             <application
               android:label="QuizApp"
@@ -101,44 +95,21 @@ jobs:
               </activity>
             </application>
           </manifest>
-          EOF
-
-          cat << 'EOF' > app/src/main/res/layout/activity_main.xml
-          <?xml version="1.0" encoding="utf-8"?>
+          ''',
+              "app/src/main/res/layout/activity_main.xml": '''<?xml version="1.0" encoding="utf-8"?>
           <WebView xmlns:android="http://schemas.android.com/apk/res/android"
             android:id="@+id/webview"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-          EOF
-
-          cat << 'EOF' > app/src/main/java/com/example/quizapp/MainActivity.java
-          package com.example.quizapp;
+          ''',
+              "app/src/main/java/com/example/quizapp/MainActivity.java": '''package com.example.quizapp;
 
           import android.os.Bundle;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import androidx.appcompat.app.AppCompatActivity;
-setContentView(R.layout.activity_main);
-              WebView webView = findViewById(R.id.webview);
-              WebSettings settings = webView.getSettings();
-              settings.setJavaScriptEnabled(true);
-              settings.setDomStorageEnabled(true);
-              webView.setWebViewClient(new WebViewClient());
-              webView.loadUrl("file:///android_asset/o_v17.html");
-            }
-          }
-          EOF
 
-      - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: quiz-app-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
           public class MainActivity extends AppCompatActivity {
             @Override
             protected void onCreate(Bundle savedInstanceState) {
-              super.onCreate(savedInstanceState);
