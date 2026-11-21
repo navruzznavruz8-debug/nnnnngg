@@ -14,13 +14,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: |
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
+          yes | sdkmanager --licenses >/dev/null || true
 
       - name: Create Android WebView project
         run: |
@@ -109,7 +112,35 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import androidx.appcompat.app.AppCompatActivity;
-
           public class MainActivity extends AppCompatActivity {
             @Override
             protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              setContentView(R.layout.activity_main);
+              WebView webView = findViewById(R.id.webview);
+              WebSettings settings = webView.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setDomStorageEnabled(true);
+              webView.setWebViewClient(new WebViewClient());
+              webView.loadUrl("file:///android_asset/o_v17.html");
+            }
+          }
+          '''
+          }
+
+          for path, content in files.items():
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(content)
+          PY
+
+      - name: Build Debug APK
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: gradle assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiz-app-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
